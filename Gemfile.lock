@@ -3,6 +3,7 @@ GEM
   specs:
     bencode (0.8.2)
     coderay (1.1.0)
+    colorize (0.7.7)
     eventmachine (1.0.7)
     method_source (0.8.2)
     pry (0.10.1)
@@ -16,5 +17,6 @@ PLATFORMS
 
 DEPENDENCIES
   bencode
+  colorize
   eventmachine
   pry

@@ -8,7 +8,7 @@ end
 require 'logger'
 require_relative 'diggers/wiretap'
 
-logger = Logger.new(STDOUT)
+logger = Logger.new('digging.log')
 #logger.level = Logger::DEBUG
 logger.level = Logger::INFO
 
