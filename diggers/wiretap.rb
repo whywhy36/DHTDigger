@@ -9,61 +9,12 @@ require 'tmpdir'
 require 'fileutils'
 require 'pry'
 require_relative 'krpc'
-require_relative 'torrent_helper'
-require_relative 'db_ops'
 
 module DHTDigger::Diggers
 
   # 'bean' style types
   Peer = Struct.new(:ip, :port)
   Metadata = Struct.new(:info_hash, :peer, :type)
-
-  class MetadataProcessor
-    include TorrentHelper
-
-    def initialize(queue, name)
-      @queue = queue
-      @name = name
-      @db_ops = DBOps.new('') #TODO:
-    end
-
-    def run
-      create_workspace
-
-      loop {
-        metadata = @queue.pop
-        process(metadata)
-      }
-    rescue => ex
-      @logger.error ex.message
-      @logger.error ex.backtrace.join("\n")
-    end
-
-    def process(metadata)
-      @logger.info "process metadata: #{metadata.inspect}" if @logger
-
-      send("process_data_from_#{metadata.type}".to_sym, metadata.info_hash, metadata.peer)
-      # parse metadata and store it in database
-    end
-
-    def process_data_from_announce_peer(info_hash, peer)
-      @logger.info "Processing announce_peer metadata : #{info_hash}"
-      # TODO:
-    end
-
-    def process_data_from_get_peers(info_hash, peer)
-      @logger.info "Processing get_peers metadata : #{info_hash}"
-      # TODO:
-    end
-
-    def create_workspace
-      # TODO: create one temp workspace for storing downloaded file
-      FileUtils::mkdir_p './tmp'
-      @workspace = Dir.mktmpdir(@name, './tmp')
-      @logger = Logger.new("#{@workspace}/worker.log")
-      @logger.level = Logger::INFO
-    end
-  end
 
   class KadNode
     attr_accessor :id, :ip, :port
@@ -103,7 +54,6 @@ module DHTDigger::Diggers
       
       @logger.info "node id is #{@node_id}, listenning on UDP socket #{@host}:#{@port}"
 
-      start_workers
       start_tap
       
       @logger.info "Setting up done."
@@ -159,28 +109,6 @@ module DHTDigger::Diggers
       postfix = local_node_id.force_encoding('ASCII-8BIT')[11, 9]
 
       (prefix + postfix).force_encoding('ASCII-8BIT')
-    end
-
-    def start_workers(count=5)
-      @logger.info "starting worker"
-      @queue = Queue.new if @queue.nil?
-      count.times do |i|
-        worker_name = "worker_#{i}_#{SecureRandom.uuid[0, 8]}"
-        Thread.new do
-          begin
-          @logger.info "starting worker #{worker_name}"
-          worker = MetadataProcessor.new(@queue, worker_name)
-          worker.run
-        rescue => ex
-          @logger.error ex.message
-          @logger.error ex.backtrace.join("\n")
-        end
-        end
-      end
-    end
-
-    def stop_workers
-      #TODO
     end
 
     def start_tap
@@ -283,7 +211,10 @@ module DHTDigger::Diggers
     def add_metadata_task(info_hash, ip, port, type)
       peer = Peer.new(ip, port)
       metadata = Metadata.new(info_hash, peer, type)
-      @queue << metadata
+
+      # TODO:
+      @logger.info "Enqueue data to Redis (TODO)"
+      # enqueue metadata to Redis, some magnet link processing worker(s) will do rest stuffs.
     end
 
     def say_ok(tid, resp_body, address, debugging = false)
