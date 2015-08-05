@@ -4,7 +4,9 @@ require 'ipaddr'
 require 'json'
 require 'digest'
 
-module DHTDigger::Digger
+# For more details about KRPC and DHT network, please refer to
+# http://www.bittorrent.org/beps/bep_0005.html
+module DHTDigger::Diggers
   module KRPC
 
     def random_string(length)
@@ -23,6 +25,7 @@ module DHTDigger::Digger
       random_string(2)
     end
 
+    # decode nodes string
     def decode_nodes_string(nodes_string)
       nodes_string = nodes_string.force_encoding('ASCII-8BIT')
 
@@ -48,6 +51,7 @@ module DHTDigger::Digger
       nodes
     end
 
+    # generate find_node query
     def find_node(nid, target_nid)
       query_body = {
         'id'     => nid,
@@ -57,6 +61,7 @@ module DHTDigger::Digger
       query_message(__method__, query_body)
     end
 
+    # generate ping query
     def ping(nid)
       query_body = {
         'id' => nid
@@ -65,16 +70,19 @@ module DHTDigger::Digger
       query_message(__method__, query_body)
     end
 
-    def get_peers(nid, infohash)
+    # generate get_peers query
+    def get_peers(nid, info_hash)
       query_body = {
         'id'       => nid,
-        'infohash' => infohash
+        'infohash' => info_hash
       }
 
       query_message(__method__, query_body)
     end
 
-    def announce_peers(nid)
+    # TODO: this method needs updating
+    # generate announce_peer query
+    def announce_peer(nid)
       query_body = {
         'id'           => nid,
         'implied_port' => '',
@@ -85,6 +93,7 @@ module DHTDigger::Digger
       query_message(__method__, query_body)
     end
 
+    # query message template
     def query_message(query_type, query_body)
       {
         't' => generate_tid,
@@ -94,6 +103,7 @@ module DHTDigger::Digger
       }
     end
 
+    # response (OK) message template
     def response_ok(tid, resp_body)
       {
         't' => tid,
@@ -102,11 +112,12 @@ module DHTDigger::Digger
       }
     end
 
+    # response (Error) message template
     def response_error(tid)
       {
         't' => tid,
         'y' => 'e',
-        'e' => [201, "A General Error Ocurred"]
+        'e' => [201, 'A General Error Ocurred']
       }
     end
   end

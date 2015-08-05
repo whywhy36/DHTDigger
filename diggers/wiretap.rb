@@ -4,32 +4,64 @@ require 'socket'
 require 'bencode'
 require 'logger'
 require 'eventmachine'
+require 'securerandom'
+require 'tmpdir'
+require 'fileutils'
 require 'pry'
 require_relative 'krpc'
+require_relative 'torrent_helper'
+require_relative 'db_ops'
 
-module DHTDigger::Digger
+module DHTDigger::Diggers
 
   # 'bean' style types
   Peer = Struct.new(:ip, :port)
-  Metadata = Struct.new(:info_hash, :peer, :types)
+  Metadata = Struct.new(:info_hash, :peer, :type)
 
   class MetadataProcessor
-    def initialize(queue, logger)
+    include TorrentHelper
+
+    def initialize(queue, name)
       @queue = queue
-      @logger = logger
+      @name = name
+      @db_ops = DBOps.new('') #TODO:
     end
 
     def run
+      create_workspace
+
       loop {
         metadata = @queue.pop
         process(metadata)
       }
+    rescue => ex
+      @logger.error ex.message
+      @logger.error ex.backtrace.join("\n")
     end
 
     def process(metadata)
-      @logger.info "process metadata: #{metadata.inspect}"
-      # TODO
+      @logger.info "process metadata: #{metadata.inspect}" if @logger
+
+      send("process_data_from_#{metadata.type}".to_sym, metadata.info_hash, metadata.peer)
       # parse metadata and store it in database
+    end
+
+    def process_data_from_announce_peer(info_hash, peer)
+      @logger.info "Processing announce_peer metadata : #{info_hash}"
+      # TODO:
+    end
+
+    def process_data_from_get_peers(info_hash, peer)
+      @logger.info "Processing get_peers metadata : #{info_hash}"
+      # TODO:
+    end
+
+    def create_workspace
+      # TODO: create one temp workspace for storing downloaded file
+      FileUtils::mkdir_p './tmp'
+      @workspace = Dir.mktmpdir(@name, './tmp')
+      @logger = Logger.new("#{@workspace}/worker.log")
+      @logger.level = Logger::INFO
     end
   end
 
@@ -60,9 +92,6 @@ module DHTDigger::Digger
       # TODO: configurable
       # This is a queue for KadNode
       @nodes = SizedQueue.new(200000)
-
-      # For information
-      #@set = Set.new
     end
 
     def setup
@@ -100,7 +129,7 @@ module DHTDigger::Digger
     end
 
     def information
-      puts "@nodes' size is #{@nodes.size}"
+      @logger.info "@nodes' size is #{@nodes.size} and @queue's size is #{@queue.size}"
     end
 
     def join_DHT_network
@@ -136,11 +165,16 @@ module DHTDigger::Digger
       @logger.info "starting worker"
       @queue = Queue.new if @queue.nil?
       count.times do |i|
-        worker_name = "worker_#{i}"
+        worker_name = "worker_#{i}_#{SecureRandom.uuid[0, 8]}"
         Thread.new do
+          begin
           @logger.info "starting worker #{worker_name}"
-          worker = MetadataProcessor.new(@queue)
+          worker = MetadataProcessor.new(@queue, worker_name)
           worker.run
+        rescue => ex
+          @logger.error ex.message
+          @logger.error ex.backtrace.join("\n")
+        end
         end
       end
     end
@@ -197,6 +231,8 @@ module DHTDigger::Digger
 
       say_ok(tid, resp_body, address, true)
       # this event should be noted and downloading operation should be done
+      # TODO: preprocessing port information according to implied_port
+      add_metadata_task(info_hash, address[3], address[1], 'announce_peer')
     end
 
     def process_get_peers_message(msg_object, address)
@@ -214,6 +250,7 @@ module DHTDigger::Digger
 
       say_ok(tid, resp_body, address, true)
       # this event should be noted
+      add_metadata_task(info_hash, address[3], address[1], 'get_peers')
     end
 
     def process_find_nodes_message(msg_object, address)
@@ -241,6 +278,12 @@ module DHTDigger::Digger
         # debuging
         #@set << resp_node['ip'] if resp_node['ip'] != '222.153.184.48'
       end
+    end
+
+    def add_metadata_task(info_hash, ip, port, type)
+      peer = Peer.new(ip, port)
+      metadata = Metadata.new(info_hash, peer, type)
+      @queue << metadata
     end
 
     def say_ok(tid, resp_body, address, debugging = false)

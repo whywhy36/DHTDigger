@@ -18,6 +18,6 @@ GOOD_NODES = [
   {'ip' => 'router.utorrent.com', 'port' => '6881'},
 ]
 
-datadig = DHTDigger::Digger::Wiretap.new('0.0.0.0', '6881',  GOOD_NODES, logger)
+datadig = DHTDigger::Diggers::Wiretap.new('0.0.0.0', '6881',  GOOD_NODES, logger)
 datadig.setup
 datadig.run
