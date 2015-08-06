@@ -7,6 +7,7 @@ require 'eventmachine'
 require 'securerandom'
 require 'tmpdir'
 require 'fileutils'
+require 'redis'
 require 'pry'
 require_relative 'krpc'
 
@@ -38,6 +39,10 @@ module DHTDigger::Diggers
       @host = host
       @port = port
       @dht_hosts = dht_hosts
+
+      @redis = Redis.new(:host => '192.168.1.101', :port => '6379', :db => '11')
+      @list = 'list_name'
+
       @logger = logger
 
       # TODO: configurable
@@ -46,21 +51,21 @@ module DHTDigger::Diggers
     end
 
     def setup
-      @logger.info "Setting up wiretap ..."
+      @logger.info 'Setting up wiretap...'
       @node_id = random_node_id.force_encoding('ASCII-8BIT')
 
       @socket = UDPSocket.new
       @socket.bind(@host, @port)
       
-      @logger.info "node id is #{@node_id}, listenning on UDP socket #{@host}:#{@port}"
+      @logger.info "node id is #{@node_id}, listening on UDP socket #{@host}:#{@port}"
 
       start_tap
       
-      @logger.info "Setting up done."
+      @logger.info 'Setting up done.'
     end
 
     def run
-      @logger.info "starting thread with timer to say hello to DHT network"
+      @logger.info 'starting thread with timer to say hello to DHT network'
       
       EM.run do
         join_DHT_network
@@ -84,7 +89,7 @@ module DHTDigger::Diggers
 
     def join_DHT_network
       return unless @nodes.empty?
-      @logger.info "(re)joining DHT network ..."
+      @logger.info '(re)joining DHT network ...'
       @dht_hosts.each do |dht_host|
         message = find_node(@node_id, random_node_id)
         send_krpc_message(message, dht_host['ip'], dht_host['port'])
@@ -178,7 +183,7 @@ module DHTDigger::Diggers
 
       say_ok(tid, resp_body, address, true)
       # this event should be noted
-      add_metadata_task(info_hash, address[3], address[1], 'get_peers')
+      enqueue_metadata_task(info_hash, address[3], address[1], 'get_peers')
     end
 
     def process_find_nodes_message(msg_object, address)
@@ -201,20 +206,8 @@ module DHTDigger::Diggers
       resp_nodes = decode_nodes_string(msg_object['r']['nodes'])
       resp_nodes.each do |resp_node|
         @logger.debug "Adding new KadNode #{resp_node['ip']}:#{resp_node['port']}"
-        @nodes << KadNode.new(resp_node['node_id'], resp_node['ip'], resp_node['port']) if resp_node['ip'] != '222.153.184.48'
-      
-        # debuging
-        #@set << resp_node['ip'] if resp_node['ip'] != '222.153.184.48'
+        @nodes << KadNode.new(resp_node['node_id'], resp_node['ip'], resp_node['port'])
       end
-    end
-
-    def add_metadata_task(info_hash, ip, port, type)
-      peer = Peer.new(ip, port)
-      metadata = Metadata.new(info_hash, peer, type)
-
-      # TODO:
-      @logger.info "Enqueue data to Redis (TODO)"
-      # enqueue metadata to Redis, some magnet link processing worker(s) will do rest stuffs.
     end
 
     def say_ok(tid, resp_body, address, debugging = false)
@@ -230,6 +223,18 @@ module DHTDigger::Diggers
         @logger.error ex.message
         @logger.error ex.backtrace.join("\n")
       end 
+    end
+
+
+    def enqueue_metadata_task(info_hash, ip, port, type)
+      metadata_task = {
+          'info_hash' => info_hash,
+          'ip'        => ip,
+          'port'      => port,
+          'type'      => type
+      }.bencode
+
+      @redis.rpush @list, metadata_task
     end
   end
 end
