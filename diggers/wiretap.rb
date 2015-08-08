@@ -43,6 +43,8 @@ module DHTDigger::Diggers
       @redis = Redis.new(:host => '192.168.1.101', :port => '6379', :db => '11')
       @list = 'list_name'
 
+      @info_hash_set = 'info_hash_set'
+
       @logger = logger
 
       # TODO: configurable
@@ -85,6 +87,11 @@ module DHTDigger::Diggers
 
     def information
       @logger.info "@nodes' size is #{@nodes.size} and @queue's size is #{@queue.size}"
+
+      if @redis.scard(@info_hash_set) > 1000000
+        @redis.del(@info_hash_set)
+      end
+
     end
 
     def join_DHT_network
@@ -165,7 +172,7 @@ module DHTDigger::Diggers
       say_ok(tid, resp_body, address, true)
       # this event should be noted and downloading operation should be done
       # TODO: preprocessing port information according to implied_port
-      add_metadata_task(info_hash, address[3], address[1], 'announce_peer')
+      enqueue_metadata_task(info_hash, address[3], address[1], 'announce_peer')
     end
 
     def process_get_peers_message(msg_object, address)
@@ -225,7 +232,6 @@ module DHTDigger::Diggers
       end 
     end
 
-
     def enqueue_metadata_task(info_hash, ip, port, type)
       metadata_task = {
           'info_hash' => info_hash,
@@ -234,7 +240,13 @@ module DHTDigger::Diggers
           'type'      => type
       }.bencode
 
-      @redis.rpush @list, metadata_task
+      unless @redis.sismember(@info_hash_set, info_hash)
+        list_name = "#{@list}_#{type}"
+        @redis.pipelined do
+          @redis.sadd @info_hash_set, info_hash
+          @redis.rpush list_name, metadata_task
+        end
+      end
     end
   end
 end
