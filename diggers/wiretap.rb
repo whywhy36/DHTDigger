@@ -243,7 +243,7 @@ module DHTDigger::Diggers
       unless @redis.sismember(@info_hash_set, info_hash)
         list_name = "#{@list}_#{type}"
         @redis.pipelined do
-          @redis.sadd @info_hash_set, info_hash
+          @redis.sadd @info_hash_set, info_hash if type == 'announce_peer'
           @redis.rpush list_name, metadata_task
         end
       end
