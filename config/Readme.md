@@ -1,0 +1,1 @@
+# Configuration shared by all components

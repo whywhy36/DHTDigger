@@ -10,6 +10,7 @@ GEM
       method_source (~> 0.8.1)
       slop (~> 3.4)
     redis (3.2.1)
+    sequel (4.25.0)
     slop (3.6.0)
 
 PLATFORMS
@@ -20,3 +21,4 @@ DEPENDENCIES
   eventmachine
   pry
   redis
+  sequel
