@@ -7,7 +7,7 @@ Sequel.migration do
       String :data_hash, :null => false
       String :length
       String :category
-      String :magenet_uri, :null => false
+      String :magnet_uri, :null => false
       String :metadata, :null => false
       Integer :counter
       DateTime :create_at, :null => false

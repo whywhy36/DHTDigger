@@ -151,9 +151,9 @@ class TorrentWorker(Thread):
         except:
             return None
         try:
-            info['create_time'] = datetime.datetime.fromtimestamp(float(torrent['creation date']))
+            info['create_time'] = datetime.datetime.fromtimestamp(float(torrent['creation date'])).strftime("%Y-%m-%d %H:%M:%S")
         except:
-            info['create_time'] = datetime.datetime.utcnow()
+            info['create_time'] = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
 
         if torrent.get('encoding'):
             self.encoding = torrent['encoding']
@@ -189,7 +189,8 @@ class TorrentWorker(Thread):
         info['data_hash'] = hashlib.md5(detail['pieces']).hexdigest()
         if 'profiles' in detail:
             info['profiles'] = detail['profiles']
-        return info
+
+        return json.dumps(info, ensure_ascii=False)
 
 if __name__ == "__main__":
     socket.setdefaulttimeout(30)

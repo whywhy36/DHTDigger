@@ -1,15 +1,77 @@
 require 'sequel'
+require 'redis'
+require 'yaml'
+require 'json'
+require 'logger'
 
 module DHTDigger
-  module Diggers
+  module Database
     class DBOps
+
       def initialize
         @redis = ''
-        @db = Sequel.postgres(:host => '192.168.1.101', :database => 'torrents',
-                              :user => 'postgres', :password => '')
+        @config = YAML.load_file("#{File.dirname(__FILE__)}/../configuration/config.yml")
+
+
+        #puts binding.pry
+
+        postgres_config = @config['postgres']
+        redis_config = @config['redis']
+        logging_config = @config['logging']
+        db_ops_config = @config['db_ops']
+
+
+        @db = Sequel.postgres(:host     => postgres_config['host'],
+                              :port     => postgres_config['port'],
+                              :database => postgres_config['database'],
+                              :user     => postgres_config['username'],
+                              :password => postgres_config['password'])
+
+        @redis = Redis.new(:host => redis_config['host'],
+                           :port => redis_config['port'],
+                           :db   => redis_config['db'])
+
+        @parsed_torrent_metadata_queue = redis_config['metadata']
+
+        @name = db_ops_config['name']
+
+        @logger = Logger.new("#{logging_config['output']}#{@name}.log")
+        @logger.level = Logger::INFO
+
+        # add logger
+        @db.loggers << @logger
       end
 
-      def run
+      def run(&callback)
+        loop do
+          item_string = @redis.blpop(@parsed_torrent_metadata_queue)[1]
+          item = JSON.parse(item_string)
+
+          category = classify_item(item)
+          name = item['name']
+          data_hash = item['data_hash']
+          length = item['length']
+          create_time = item['create_time']
+          files = item['files']
+          profiles = item['profiles']
+
+
+          dataset = @db[:torrents]
+          torrent = dataset.insert(:name => name,
+                         :files => files.to_s,
+                         :data_hash => data_hash,
+                         :length => length,
+                         :category => category,
+                         :magnet_uri => '',
+                         :metadata => item_string,
+                         :create_at => create_time,
+                         :updated_at => DateTime.now)
+
+          callback.call(torrent) if callback
+        end
+      end
+
+      def classify_item(item)
 
       end
     end

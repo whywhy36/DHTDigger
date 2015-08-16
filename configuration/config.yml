@@ -1,0 +1,41 @@
+# env configuration
+name: DHTDigger
+author: whywhy36
+version: 1
+
+# Postgres
+postgres:
+  host: 192.168.1.101
+  port: 5432
+  username: postgres
+  password:
+  database: torrents
+
+# Redis
+redis:
+  host: 192.168.1.101
+  port: 6379
+  db: 11
+  get_peers_queue: xxx
+  announce_peer_queue: xxx
+  metadata: metadata
+  infohash_set: info_hash_set
+
+
+# Logging
+logging:
+  level: info
+  output: /tmp/dht_logs/
+
+
+# Components
+wiretap:
+  number: 3
+  name_prefix: wiretap
+
+torrent_processor:
+  number: 1
+  name_prefix: torrent_processor
+
+db_ops:
+  name: db_ops
