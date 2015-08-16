@@ -53,6 +53,7 @@ module DHTDigger
           length = item['length']
           create_time = item['create_time']
           files = item['files']
+          magnet_uri = item['magnet_uri'] || ''
           profiles = item['profiles']
 
 
@@ -62,7 +63,7 @@ module DHTDigger
                          :data_hash => data_hash,
                          :length => length,
                          :category => category,
-                         :magnet_uri => '',
+                         :magnet_uri => magnet_uri,
                          :metadata => item_string,
                          :create_at => create_time,
                          :updated_at => DateTime.now)

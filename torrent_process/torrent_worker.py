@@ -119,7 +119,10 @@ class TorrentWorker(Thread):
 
         torrent_info = self.parse_torrent_content(torrent_content)
 
-        return torrent_info
+        if torrent_info:
+            torrent_info['magnet_uri'] = magnet_uri
+
+        return json.dumps(torrent_info, ensure_ascii=False)
 
     # borrowed
     def decode(self, s):
@@ -190,7 +193,7 @@ class TorrentWorker(Thread):
         if 'profiles' in detail:
             info['profiles'] = detail['profiles']
 
-        return json.dumps(info, ensure_ascii=False)
+        return info
 
 if __name__ == "__main__":
     socket.setdefaulttimeout(30)
