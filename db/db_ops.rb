@@ -45,6 +45,8 @@ module DHTDigger
       def run(&callback)
         loop do
           item_string = @redis.blpop(@parsed_torrent_metadata_queue)[1]
+          @logger.info "item_string is #{item_string}"
+          next if item_string.nil? or item_string.eql? 'null'
           item = JSON.parse(item_string)
 
           category = classify_item(item)
@@ -58,17 +60,21 @@ module DHTDigger
 
 
           dataset = @db[:torrents]
-          torrent = dataset.insert(:name => name,
-                         :files => files.to_s,
-                         :data_hash => data_hash,
-                         :length => length,
-                         :category => category,
-                         :magnet_uri => magnet_uri,
-                         :metadata => item_string,
-                         :create_at => create_time,
-                         :updated_at => DateTime.now)
 
-          callback.call(torrent) if callback
+          record = dataset.where(:data_hash => data_hash)
+          if 1 != record.update(:counter=>Sequel.+(:counter, 1))
+            torrent = dataset.insert(:name => name,
+                           :files => files.to_s,
+                           :data_hash => data_hash,
+                           :length => length,
+                           :category => category,
+                           :magnet_uri => magnet_uri,
+                           :metadata => item_string,
+                           :counter => 1,
+                           :create_at => create_time,
+                           :updated_at => DateTime.now)
+            callback.call(torrent) if callback
+          end
         end
       end
 
