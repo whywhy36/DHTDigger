@@ -34,22 +34,24 @@ module DHTDigger::Diggers
     attr_accessor :socket
     attr_accessor :logger
 
-    def initialize(host, port, dht_hosts, logger)
+    def initialize(host, port, dht_hosts, redis_config, logger, options)
       @queue = Queue.new
       @host = host
       @port = port
       @dht_hosts = dht_hosts
 
-      @redis = Redis.new(:host => '192.168.1.101', :port => '6379', :db => '11')
-      @list = 'list_name'
+      @options = {'max_kadnodes' => 200000, 'infohash_set_max' => 1000000}.merge options
 
-      @info_hash_set = 'info_hash_set'
+      @redis = Redis.new(:host => redis_config['host'], :port => redis_config['port'], :db => redis_config['db'])
+      @list = redis_config['message_queue']
+
+      @info_hash_set = redis_config['infohash_set']
 
       @logger = logger
 
       # TODO: configurable
       # This is a queue for KadNode
-      @nodes = SizedQueue.new(200000)
+      @nodes = SizedQueue.new(@options['max_kadnodes'])
     end
 
     def setup
@@ -88,7 +90,7 @@ module DHTDigger::Diggers
     def information
       @logger.info "@nodes' size is #{@nodes.size} and @queue's size is #{@queue.size}"
 
-      if @redis.scard(@info_hash_set) > 1000000
+      if @redis.scard(@info_hash_set) > @options['infohash_set_max']
         @redis.del(@info_hash_set)
       end
 

@@ -16,8 +16,7 @@ redis:
   host: 192.168.1.101
   port: 6379
   db: 11
-  get_peers_queue: xxx
-  announce_peer_queue: xxx
+  message_queue: list_name
   metadata: metadata
   infohash_set: info_hash_set
 
@@ -29,9 +28,22 @@ logging:
 
 
 # Components
+
+# Wiretap configuraiton is an array, for 'host', all IP(s) should be belong to one host for this version
 wiretap:
-  number: 3
-  name_prefix: wiretap
+  - name: wiretap_1
+    host: 0.0.0.0
+    port: 6881
+  - name: wiretap_2
+    host: 0.0.0.0
+    port: 6981
+  - name: wiretap_3
+    host: 0.0.0.0
+    port: 7081
+
+wiretap_options:
+  max_kadnodes: 200000
+  infohash_set_max: 1000000
 
 torrent_processor:
   number: 1
@@ -39,3 +51,12 @@ torrent_processor:
 
 db_ops:
   name: db_ops
+
+dht_hosts:
+  - ip: router.bittorrent.com
+    port: 6881
+  - ip: dht.transmissionbt.com
+    port: 6881
+  - ip: router.utorrent.com
+    port: 6881
+

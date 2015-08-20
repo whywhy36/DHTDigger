@@ -6,18 +6,39 @@ module DHTDigger
 end
 
 require 'logger'
+require 'yaml'
 require_relative 'diggers/wiretap'
 
-logger = Logger.new('digging.log')
-#logger.level = Logger::DEBUG
-logger.level = Logger::INFO
+all_diggers = []
+trap('TERM') do
+  puts 'Receiving terminate signal ...'
+  all_diggers.each { |pid| Process.kill(:TERM, pid)}
+end
 
-GOOD_NODES = [
-  {'ip' => 'router.bittorrent.com', 'port' => '6881'},
-  {'ip' => 'dht.transmissionbt.com', 'port' => '6881'},
-  {'ip' => 'router.utorrent.com', 'port' => '6881'},
-]
+config = YAML.load_file("#{File.dirname(__FILE__)}/configuration/config.yml")
 
-datadig = DHTDigger::Diggers::Wiretap.new('0.0.0.0', '6881',  GOOD_NODES, logger)
-datadig.setup
-datadig.run
+redis_config = config['redis']
+wiretap_options = config['wiretap_options']
+dht_hosts = config['dht_hosts']
+logging_config = config['logging']
+
+wiretap_config = config['wiretap']
+
+wiretap_config.each do |each_config|
+  all_diggers << fork do
+    name = each_config['name']
+    host = each_config['host']
+    port = each_config['port']
+    private_logger = Logger.new("#{logging_config['output']}#{name}.log")
+    private_logger.level = Logger::INFO
+
+    single_digger = DHTDigger::Diggers::Wiretap.new(
+        host, port, dht_hosts, redis_config, private_logger, wiretap_options)
+
+    single_digger.setup
+    single_digger.run
+  end
+end
+
+puts "Starting #{all_diggers.size} digger(s) ..."
+Process.waitall
