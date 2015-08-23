@@ -9,10 +9,15 @@ require 'logger'
 require 'yaml'
 require_relative 'diggers/wiretap'
 
+file_path = '/Users/yuanzhuang/temp/dhtpids/dht_digger.pid'
+
+File.open(file_path, 'a') unless File.exist?(file_path)
+
 all_diggers = []
 trap('TERM') do
   puts 'Receiving terminate signal ...'
   all_diggers.each { |pid| Process.kill(:TERM, pid)}
+  exit
 end
 
 config = YAML.load_file("#{File.dirname(__FILE__)}/configuration/config.yml")
@@ -38,6 +43,13 @@ wiretap_config.each do |each_config|
     single_digger.setup
     single_digger.run
   end
+end
+
+at_exit do
+  # check PID file and delete it
+  puts 'Deleting PID file'
+  File.delete(file_path) if File.exist?(file_path)
+  puts 'Exiting ...'
 end
 
 puts "Starting #{all_diggers.size} digger(s) ..."
