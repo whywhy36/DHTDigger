@@ -11,7 +11,11 @@ require_relative 'diggers/wiretap'
 
 file_path = '/Users/yuanzhuang/temp/dhtpids/dht_digger.pid'
 
-File.open(file_path, 'a') unless File.exist?(file_path)
+unless File.exist?(file_path)
+  File.open(file_path, 'w') do |file|
+      file.write(Process.pid)
+  end
+end
 
 all_diggers = []
 trap('TERM') do
