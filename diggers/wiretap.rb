@@ -90,6 +90,10 @@ module DHTDigger::Diggers
     def information
       @logger.info "@nodes' size is #{@nodes.size} and @queue's size is #{@queue.size}"
 
+      if @nodes.size == @options['max_kadnodes']
+        @nodes.clear
+      end
+
       if @redis.scard(@info_hash_set) > @options['infohash_set_max']
         @redis.del(@info_hash_set)
       end
