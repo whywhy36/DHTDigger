@@ -9,7 +9,7 @@ Sequel.migration do
     run p %{
 create function torrents_search_trigger() RETURNS trigger AS $$
 	begin
-		new.tsv := to_tsvector(coalesce(text, ''));
+		new.tsv := to_tsvector(coalesce(new.name, ''));
 		return new;
 	end
 $$ LANGUAGE plpgsql;
