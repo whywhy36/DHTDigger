@@ -9,11 +9,11 @@ postgres:
   port: 5432
   username: postgres
   password:
-  database: torrents
+  database: torrents_new_copy_test
 
 # Redis
 redis:
-  host: 192.168.1.101
+  host: 192.168.1.111
   port: 6379
   db: 11
   message_queue: list_name

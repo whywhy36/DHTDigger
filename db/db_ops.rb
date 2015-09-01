@@ -71,7 +71,7 @@ module DHTDigger
                            :magnet_uri => magnet_uri,
                            :metadata => item_string,
                            :counter => 1,
-                           :create_at => create_time,
+                           :created_at => create_time,
                            :updated_at => DateTime.now)
             callback.call(torrent) if callback
           end
