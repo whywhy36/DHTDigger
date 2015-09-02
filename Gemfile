@@ -3,7 +3,7 @@ source 'https://rubygems.org'
 gem 'bencode'
 gem 'eventmachine'
 gem 'redis'
-gem 'sequel'
+gem 'activerecord'
 gem 'pg'
 
 gem 'pry'
