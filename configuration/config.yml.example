@@ -3,42 +3,45 @@ name: DHTDigger
 author: whywhy36
 version: 1
 
-pid_path: [path_to_pid_file]
+pid_path: /var/run/dht_digger.pid
 
 # Postgres
 postgres:
-  host: [postgresql hostname or ip]
-  port: [postgresql port]
-  username: [postgresql username]
-  password: [postgresql password]
-  database: [database name]
+  host: 192.168.1.1
+  port: 5342
+  username: postgres
+  password:
+  database: torrents
 
 # Redis
 redis:
-  host: [redis host or ip]
-  port: [redis port]
-  db: [db]
-  message_queue: [prefix of queues for announce_peer & get_peers message]
-  metadata: [name of queue to store metadata parsed from torrent file]
-  infohash_set: [hash to prevent duplication]
+  host: 192.168.1.111
+  port: 6379
+  db: 11
+  message_queue: list_name
+  metadata: metadata
+  infohash_set: info_hash_set
 
 
 # Logging
 logging:
-  level: [log level]
-  output: [log output folder]
+  level: info
+  output: /tmp/dht_logs/
 
 
 # Components
 
 # Wiretap configuraiton is an array, for 'host', all IP(s) should be belong to one host for this version
 wiretap:
-  - name: [worker-1-name]
+  - name: wiretap_1
     host: 0.0.0.0
-    port: [worker-1-port]
-  - name: [worker-2-name]
+    port: 6881
+  - name: wiretap_2
     host: 0.0.0.0
-    port: [worker-2-port]
+    port: 6981
+  - name: wiretap_3
+    host: 0.0.0.0
+    port: 7081
 
 wiretap_options:
   max_kadnodes: 200000
